@@ -18,6 +18,8 @@ module WebviewRuby
   attach_function :webview_bind, [:pointer, :string, :pointer, :pointer], :void
   attach_function :webview_eval, [:pointer, :string], :void
   attach_function :webview_init, [:pointer, :string], :void
+  attach_function :webview_return,     [:pointer, :string, :int, :string], :void
+
 
   class Webview
     attr_reader :is_running
@@ -58,11 +60,8 @@ module WebviewRuby
       callback = FFI::Function.new(:void, [:string, :string, :pointer]) do |seq, req, arg|
         begin 
           params = JSON.parse(req)
-          if func
-            func(*params)
-          else
-            block.call(*params)
-          end
+          result =  func ? func(*params) : block.call(*params)
+          WebviewRuby.webview_return(@window,seq, 0, result.to_json)
         rescue StandardError => e
           print("Error occured: #{e.full_message}. \n\n Going to terminate\n")
           terminate
